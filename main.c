@@ -58,6 +58,19 @@ void onClientDisconnect(struct ServerState *server_state, int idx)
     server_state->num_clients--;
 }
 
+int serveNewConnections(struct ServerState *server_state)
+{
+    if (server_state->pollfds[0].revents & POLLIN)
+    {
+        if (onClientConnect(server_state) < 0)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 void processClientMessage(int client_fd, char *buffer, int len)
 {
     // TODO: Check for valid HTTP structure, and respond accordingly.
@@ -101,13 +114,9 @@ int main(int argc, char **argv)
         int poll_result = poll(server_state.pollfds, server_state.num_clients + 1, 100);
         if (poll_result > 0)
         {
-            // Client connect event
-            if (server_state.pollfds[0].revents & POLLIN)
+            if (serveNewConnections(&server_state) < 0)
             {
-                if (onClientConnect(&server_state) < 0)
-                {
-                    break;
-                }
+                break;
             }
 
             // Serve clients
