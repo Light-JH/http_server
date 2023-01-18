@@ -50,6 +50,14 @@ int onClientConnect(struct ServerState *server_state)
     return 0;
 }
 
+void onClientDisconnect(struct ServerState *server_state, int idx)
+{
+    printf("Client %d disconnected\n", idx);
+    close(server_state->pollfds[idx].fd);
+    memset(&server_state->pollfds[idx], 0, sizeof(struct pollfd));
+    server_state->num_clients--;
+}
+
 void processClientMessage(int client_fd, char *buffer, int len)
 {
     // TODO: Check for valid HTTP structure, and respond accordingly.
@@ -110,10 +118,7 @@ int main(int argc, char **argv)
                     int len = read(server_state.pollfds[idx].fd, buffer, sizeof(buffer) - 1);
                     if (len <= 0) // Error (-1) or Disconnect (0)
                     {
-                        printf("Client %d disconnected\n", idx);
-                        close(server_state.pollfds[idx].fd);
-                        memset(&server_state.pollfds[idx], 0, sizeof(struct pollfd));
-                        server_state.num_clients--;
+                        onClientDisconnect(&server_state, idx);
                     }
                     else
                     {
