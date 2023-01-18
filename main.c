@@ -51,12 +51,17 @@ int onClientConnect(struct ServerState *server_state)
     return 0;
 }
 
-void onClientDisconnect(struct ServerState *server_state, int idx)
+void closeClient(struct ServerState *server_state, int idx)
 {
-    printf("Client %d disconnected\n", idx);
     close(server_state->pollfds[idx].fd);
     memset(&server_state->pollfds[idx], 0, sizeof(struct pollfd));
     server_state->num_clients--;
+}
+
+void onClientDisconnect(struct ServerState *server_state, int idx)
+{
+    printf("Client %d disconnected\n", idx);
+    closeClient(server_state, idx);
 }
 
 int serveNewConnections(struct ServerState *server_state)
@@ -96,6 +101,24 @@ void serveClients(struct ServerState *server_state)
             }
         }
     }
+}
+
+void shutdownServer(struct ServerState *server_state)
+{
+    // Error or SIGINT received: clean up and close
+    printf("Exiting...\n");
+
+    // Close open clients
+    for (int idx = 1; idx <= MAX_CLIENTS; idx++)
+    {
+        if (server_state->pollfds[idx].fd > 0)
+        {
+            printf("Closing client %d...\n", idx - 1);
+            closeClient(server_state, idx);
+        }
+    }
+    printf("Shutting down server...\n");
+    close(server_state->server_fd);
 }
 
 int main(int argc, char **argv)
@@ -141,22 +164,7 @@ int main(int argc, char **argv)
         }
     }
 
-    // Error or SIGINT received: clean up and close
-    printf("Exiting...\n");
-
-    // Close open clients
-    for (int idx = 1; idx <= MAX_CLIENTS; idx++)
-    {
-        if (server_state.pollfds[idx].fd > 0)
-        {
-            printf("Closing client %d...\n", idx - 1);
-            close(server_state.pollfds[idx].fd);
-            memset(&server_state.pollfds[idx], 0, sizeof(struct pollfd));
-            server_state.num_clients--;
-        }
-    }
-    printf("Shutting down server...\n");
-    close(server_state.server_fd);
+    shutdownServer(&server_state);
 
     return 0;
 }
