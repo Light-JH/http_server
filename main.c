@@ -16,6 +16,13 @@ void intHandler(int signal)
     receivedSigInt = 1;
 }
 
+struct ServerState
+{
+    int server_fd;
+    int num_clients;
+    struct pollfd pollfds[MAX_CLIENTS + 1];
+};
+
 void processClientMessage(int client_fd, char *buffer, int len)
 {
     // TODO: Check for valid HTTP structure, and respond accordingly.
@@ -42,12 +49,12 @@ int main(int argc, char **argv)
     // Register SIGINT handling
     signal(SIGINT, intHandler);
 
-    // Set up polling structures
-    struct pollfd pollfds[MAX_CLIENTS + 1];
-    memset(pollfds, 0, sizeof(pollfds));
-    pollfds[0].fd = server_fd;
-    pollfds[0].events = POLLIN | POLLPRI;
-    int use_client = 0;
+    // Initialize ServerState struct
+    struct ServerState server_state;
+    memset(&server_state, 0, sizeof(server_state));
+    server_state.server_fd = server_fd;
+    server_state.pollfds[0].fd = server_fd;
+    server_state.pollfds[0].events = POLLIN | POLLPRI;
 
     // Buffer for accepting messages from client
     char buffer[1024];
@@ -56,11 +63,11 @@ int main(int argc, char **argv)
     while (!receivedSigInt)
     {
         // Poll for timeout
-        int poll_result = poll(pollfds, use_client + 1, 100);
+        int poll_result = poll(server_state.pollfds, server_state.num_clients + 1, 100);
         if (poll_result > 0)
         {
             // Client connect event
-            if (pollfds[0].revents & POLLIN)
+            if (server_state.pollfds[0].revents & POLLIN)
             {
                 struct sockaddr_in client_addr;
                 socklen_t addr_size = sizeof(client_addr);
@@ -74,11 +81,11 @@ int main(int argc, char **argv)
                 // Search for a pollfd to assign this client into
                 for (int idx = 1; idx <= MAX_CLIENTS; idx++)
                 {
-                    if (pollfds[idx].fd == 0)
+                    if (server_state.pollfds[idx].fd == 0)
                     {
-                        pollfds[idx].fd = client_fd;
-                        pollfds[idx].events = POLLIN | POLLPRI;
-                        use_client++;
+                        server_state.pollfds[idx].fd = client_fd;
+                        server_state.pollfds[idx].events = POLLIN | POLLPRI;
+                        server_state.num_clients++;
                         printf("Client %d connected: %s:%u\n", idx, inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
                         break;
                     }
@@ -88,19 +95,19 @@ int main(int argc, char **argv)
             // Serve clients
             for (int idx = 1; idx <= MAX_CLIENTS; idx++)
             {
-                if (pollfds[idx].fd > 0 && pollfds[idx].revents & POLLIN)
+                if (server_state.pollfds[idx].fd > 0 && server_state.pollfds[idx].revents & POLLIN)
                 {
-                    int len = read(pollfds[idx].fd, buffer, sizeof(buffer) - 1);
+                    int len = read(server_state.pollfds[idx].fd, buffer, sizeof(buffer) - 1);
                     if (len <= 0) // Error (-1) or Disconnect (0)
                     {
                         printf("Client %d disconnected\n", idx);
-                        close(pollfds[idx].fd);
-                        memset(&pollfds[idx], 0, sizeof(struct pollfd));
-                        use_client--;
+                        close(server_state.pollfds[idx].fd);
+                        memset(&server_state.pollfds[idx], 0, sizeof(struct pollfd));
+                        server_state.num_clients--;
                     }
                     else
                     {
-                        processClientMessage(pollfds[idx].fd, buffer, len);
+                        processClientMessage(server_state.pollfds[idx].fd, buffer, len);
                     }
                 }
             }
@@ -113,16 +120,16 @@ int main(int argc, char **argv)
     // Close open clients
     for (int idx = 1; idx <= MAX_CLIENTS; idx++)
     {
-        if (pollfds[idx].fd > 0)
+        if (server_state.pollfds[idx].fd > 0)
         {
             printf("Closing client %d...\n", idx - 1);
-            close(pollfds[idx].fd);
-            memset(&pollfds[idx], 0, sizeof(struct pollfd));
-            use_client--;
+            close(server_state.pollfds[idx].fd);
+            memset(&server_state.pollfds[idx], 0, sizeof(struct pollfd));
+            server_state.num_clients--;
         }
     }
     printf("Shutting down server...\n");
-    close(server_fd);
+    close(server_state.server_fd);
 
     return 0;
 }
