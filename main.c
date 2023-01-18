@@ -21,6 +21,7 @@ struct ServerState
     int server_fd;
     int num_clients;
     struct pollfd pollfds[MAX_CLIENTS + 1];
+    char buffer[65536];
 };
 
 int onClientConnect(struct ServerState *server_state)
@@ -78,6 +79,25 @@ void processClientMessage(int client_fd, char *buffer, int len)
     send(client_fd, buffer, len, 0);
 }
 
+void serveClients(struct ServerState *server_state)
+{
+    for (int idx = 1; idx <= MAX_CLIENTS; idx++)
+    {
+        if (server_state->pollfds[idx].fd > 0 && server_state->pollfds[idx].revents & POLLIN)
+        {
+            int len = read(server_state->pollfds[idx].fd, server_state->buffer, sizeof(server_state->buffer) - 1);
+            if (len <= 0) // Error (-1) or Disconnect (0)
+            {
+                onClientDisconnect(server_state, idx);
+            }
+            else
+            {
+                processClientMessage(server_state->pollfds[idx].fd, server_state->buffer, len);
+            }
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2)
@@ -104,9 +124,6 @@ int main(int argc, char **argv)
     server_state.pollfds[0].fd = server_fd;
     server_state.pollfds[0].events = POLLIN | POLLPRI;
 
-    // Buffer for accepting messages from client
-    char buffer[1024];
-
     // Loop until SIGINT is received
     while (!receivedSigInt)
     {
@@ -120,21 +137,7 @@ int main(int argc, char **argv)
             }
 
             // Serve clients
-            for (int idx = 1; idx <= MAX_CLIENTS; idx++)
-            {
-                if (server_state.pollfds[idx].fd > 0 && server_state.pollfds[idx].revents & POLLIN)
-                {
-                    int len = read(server_state.pollfds[idx].fd, buffer, sizeof(buffer) - 1);
-                    if (len <= 0) // Error (-1) or Disconnect (0)
-                    {
-                        onClientDisconnect(&server_state, idx);
-                    }
-                    else
-                    {
-                        processClientMessage(server_state.pollfds[idx].fd, buffer, len);
-                    }
-                }
-            }
+            serveClients(&server_state);
         }
     }
 
