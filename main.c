@@ -37,17 +37,9 @@ int main(int argc, char **argv)
     // Loop until SIGINT is received
     while (!receivedSigInt)
     {
-        // Poll for timeout
-        int poll_result = poll(server_state.pollfds, server_state.num_clients + 1, 100);
-        if (poll_result > 0)
+        if (serverTick(&server_state) < 0)
         {
-            if (serveNewConnections(&server_state) < 0)
-            {
-                break;
-            }
-
-            // Serve clients
-            serveClients(&server_state);
+            break;
         }
     }
 

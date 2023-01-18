@@ -154,3 +154,21 @@ void shutdownServer(struct ServerState *server_state)
     printf("Shutting down server...\n");
     close(server_state->server_fd);
 }
+
+int serverTick(struct ServerState *server_state)
+{
+    // Poll for timeout
+    int poll_result = poll(server_state->pollfds, server_state->num_clients + 1, 100);
+    if (poll_result > 0)
+    {
+        if (serveNewConnections(server_state) < 0)
+        {
+            return -1;
+        }
+
+        // Serve clients
+        serveClients(server_state);
+    }
+
+    return 0;
+}
