@@ -23,6 +23,33 @@ struct ServerState
     struct pollfd pollfds[MAX_CLIENTS + 1];
 };
 
+int onClientConnect(struct ServerState *server_state)
+{
+    struct sockaddr_in client_addr;
+    socklen_t addr_size = sizeof(client_addr);
+    int client_fd = accept(server_state->server_fd, (struct sockaddr *)&client_addr, &addr_size);
+    if (client_fd < 0)
+    {
+        printf("Error accepting client...\n");
+        return -1;
+    }
+
+    // Search for a pollfd to assign this client into
+    for (int idx = 1; idx <= MAX_CLIENTS; idx++)
+    {
+        if (server_state->pollfds[idx].fd == 0)
+        {
+            server_state->pollfds[idx].fd = client_fd;
+            server_state->pollfds[idx].events = POLLIN | POLLPRI;
+            server_state->num_clients++;
+            printf("Client %d connected: %s:%u\n", idx, inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+            break;
+        }
+    }
+
+    return 0;
+}
+
 void processClientMessage(int client_fd, char *buffer, int len)
 {
     // TODO: Check for valid HTTP structure, and respond accordingly.
@@ -69,26 +96,9 @@ int main(int argc, char **argv)
             // Client connect event
             if (server_state.pollfds[0].revents & POLLIN)
             {
-                struct sockaddr_in client_addr;
-                socklen_t addr_size = sizeof(client_addr);
-                int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addr_size);
-                if (client_fd < 0)
+                if (onClientConnect(&server_state) < 0)
                 {
-                    printf("Error accepting client...\n");
                     break;
-                }
-
-                // Search for a pollfd to assign this client into
-                for (int idx = 1; idx <= MAX_CLIENTS; idx++)
-                {
-                    if (server_state.pollfds[idx].fd == 0)
-                    {
-                        server_state.pollfds[idx].fd = client_fd;
-                        server_state.pollfds[idx].events = POLLIN | POLLPRI;
-                        server_state.num_clients++;
-                        printf("Client %d connected: %s:%u\n", idx, inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-                        break;
-                    }
                 }
             }
 
