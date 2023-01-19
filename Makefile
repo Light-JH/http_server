@@ -1,5 +1,5 @@
-main: main.c
-	cc -o main main.c
+normal_web_server: main.c
+	cc -o normal_web_server main.c
 
 clean:
-	rm -f main
+	rm -f normal_web_server
