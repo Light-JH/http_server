@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "tcp.h"
+#include "http.h"
 
 static volatile int receivedSigInt = 0;
 

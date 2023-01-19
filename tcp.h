@@ -7,6 +7,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include "http.h"
 
 #define MAX_CLIENTS 1
 
@@ -113,9 +114,47 @@ int serveNewConnections(struct ServerState *server_state)
 
 void processClientMessage(int client_fd, char *buffer, int len)
 {
-    // TODO: Check for valid HTTP structure, and respond accordingly.
-    // For now just echo back
-    send(client_fd, buffer, len, 0);
+    struct HttpCheckResult http_check_result;
+    checkHttpRequest(buffer, len, &http_check_result);
+
+    char response_buffer[65536];
+    memset(response_buffer, 0, sizeof(response_buffer));
+
+    if (http_check_result.code == 400)
+    {
+        snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 400 Bad Request\r\n");
+        send(client_fd, response_buffer, strlen(response_buffer), 0);
+    }
+    else if (http_check_result.code == 404)
+    {
+        snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 404 Not Found\r\n");
+        send(client_fd, response_buffer, strlen(response_buffer), 0);
+    }
+    else if (http_check_result.code == 200)
+    {
+        // break up url
+        char *command = http_check_result.url + strlen("/exec/");
+        parseCommand(command);
+        // Execute the command
+        system(command);
+    }
+
+    // if (http_check_result.code != 200)
+    // {
+    //
+    // }
+
+    // if (http_check_result.code == 200)
+    // {
+    // }
+    // else
+    // {
+    //     send(client_fd, )
+    // }
+
+    // // TODO: Check for valid HTTP structure, and respond accordingly.
+    // // For now just echo back
+    // send(client_fd, buffer, len, 0);
 }
 
 void serveClients(struct ServerState *server_state)
