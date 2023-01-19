@@ -55,7 +55,6 @@ void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
                     0 == strcmp(method, "OPTIONS") ||
                     0 == strcmp(method, "TRACE")))
             {
-                printf("invalid method\n");
                 result->code = 400;
                 return;
             }
@@ -63,8 +62,6 @@ void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
             // CHeck if version is correct
             if (!(0 == strcmp(version, "HTTP/1.1")))
             {
-                printf("invalid version: %s\n", version);
-                printf("%d vs %d\n", strlen(version), strlen("HTTP/1.1"));
                 result->code = 400;
                 return;
             }
@@ -94,8 +91,6 @@ void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
 
 void parseCommand(char *command)
 {
-    printf("parsing command...\n");
-
     const int len = strlen(command);
 
     // Count the number of "%20" (spaces) that we will replace

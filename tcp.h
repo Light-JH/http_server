@@ -112,6 +112,24 @@ int serveNewConnections(struct ServerState *server_state)
     return 0;
 }
 
+void executeCommand(char *command, char *output_buffer, int len)
+{
+    FILE *fp = popen(command, "r");
+    if (fp == NULL)
+    {
+        return;
+    }
+
+    while (fgets(output_buffer, len, fp) != NULL)
+    {
+        int slen = strlen(output_buffer);
+        len -= slen;
+        output_buffer += slen;
+    }
+
+    pclose(fp);
+}
+
 void processClientMessage(int client_fd, char *buffer, int len)
 {
     struct HttpCheckResult http_check_result;
@@ -132,29 +150,14 @@ void processClientMessage(int client_fd, char *buffer, int len)
     }
     else if (http_check_result.code == 200)
     {
+        int written_len = snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 200 OK\r\n");
         // break up url
         char *command = http_check_result.url + strlen("/exec/");
         parseCommand(command);
         // Execute the command
-        system(command);
+        executeCommand(command, response_buffer + written_len, sizeof(response_buffer) - written_len * sizeof(char));
+        send(client_fd, response_buffer, strlen(response_buffer), 0);
     }
-
-    // if (http_check_result.code != 200)
-    // {
-    //
-    // }
-
-    // if (http_check_result.code == 200)
-    // {
-    // }
-    // else
-    // {
-    //     send(client_fd, )
-    // }
-
-    // // TODO: Check for valid HTTP structure, and respond accordingly.
-    // // For now just echo back
-    // send(client_fd, buffer, len, 0);
 }
 
 void serveClients(struct ServerState *server_state)
