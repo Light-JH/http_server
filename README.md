@@ -1,2 +1,26 @@
 # http_server
 Minimal http server written in C
+
+# Building and Cleaning
+To build the `normal_web_server` binary, run the `make` command.
+To delete the binary, run the `make clean` command.
+
+# Running
+To run the http server, run `./normal_web_server <port>`.
+
+HTTP/1.1 requests can be made at the provided port.
+Bad requests will return a 400 error code.
+Valid requests that are not `GET` on `/exec/<command>` will return a 404 error code.
+Valid `GET` requests on the `/exec/<command>` path will return a 200 OK code, with the output of the command as the response.
+
+# How it works
+1. Application sets up a TCP server on `127.0.0.1` for the command-line provided port.
+2. The `signal` function is used to override default behavior for `SIGINT` signals.
+    - on receiving this signal, it sets an integer to 1 which will stop the main loop, so that the server is cleaned up properly.
+3. Application uses `poll` with a 100ms timeout to check for connecting clients.
+4. On messsages from clients, the server will check for valid HTTP/1.1 requests.
+    - Bad requests will return a 400 error code.
+    - Valid requests that are not `GET` on `/exec/<command>` will return a 404 error code.
+    - Valid `GET` requests on the `/exec/<command>` path will return a 200 OK code, with the output of the command as the response.
+5. Command execution is done using `popen` so that output can be captured and sent to the requesting client.
+6. On shutdown, the server fd and all client fds are closed.
