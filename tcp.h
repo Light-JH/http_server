@@ -151,13 +151,11 @@ void processClientMessage(int client_fd, char *buffer, int len)
     }
     else if (http_check_result.code == 200)
     {
-        int written_len = snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
-        // break up url
+        int written_len = snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 200 OK\r\n\r\n");
         char *command = http_check_result.url + strlen("/exec/");
-        parseCommand(command);
+
         // Execute the command
         executeCommand(command, response_buffer + written_len, sizeof(response_buffer) - written_len * sizeof(char));
-        snprintf(response_buffer + strlen(response_buffer), sizeof(response_buffer) - strlen(response_buffer), "\r\n");
         send(client_fd, response_buffer, strlen(response_buffer), 0);
     }
 }

@@ -116,31 +116,3 @@ void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
 
     return;
 }
-
-void parseCommand(char *command)
-{
-    const int len = strlen(command);
-
-    // Count the number of "%20" (spaces) that we will replace
-    char *current = command;
-    while (1)
-    {
-        char *next = strstr(current, "%20");
-        if (next)
-        {
-            // want to replace "%20" with " "
-            *next = ' ';
-            // strcpy(next, next);
-            for (int idx = next - command + 1; idx < len; ++idx)
-            {
-                command[idx] = command[idx + 2];
-            }
-            next = next + 1;
-        }
-        if (!next)
-        {
-            break;
-        }
-        current = next;
-    }
-}
