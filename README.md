@@ -1,5 +1,8 @@
+Name: Jinjuan Hu
+ID: 1223893775
+
 # http_server
-Minimal http server written in C
+Minimal http server written in C.
 
 # Building and Cleaning
 To build the `normal_web_server` binary, run the `make` command.
