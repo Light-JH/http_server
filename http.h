@@ -14,6 +14,34 @@ struct HttpCheckResult
     char *url;
 };
 
+char urlEncodedChar(char *str)
+{
+    char buf[3];
+    buf[0] = str[1];
+    buf[1] = str[2];
+    buf[2] = 0;
+
+    int number = (int)strtol(buf, NULL, 16);
+    return (char)number;
+}
+
+void parseUrl(char *url)
+{
+    int len = strlen(url);
+    for (int idx = 0; idx < len; ++idx)
+    {
+        if (url[idx] == '%')
+        {
+            url[idx] = urlEncodedChar(url + idx);
+            for (int jdx = idx + 1; jdx < len; ++jdx)
+            {
+                url[jdx] = url[jdx + 2];
+            }
+            len -= 2;
+        }
+    }
+}
+
 void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
 {
     // zero out the result
@@ -39,7 +67,6 @@ void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
             // Wrong number of fields in request line
             if (method == NULL || url == NULL || version == NULL || next != NULL)
             {
-                printf("wrong number of fields in request\n");
                 result->code = 400;
                 return;
             }
@@ -66,6 +93,7 @@ void checkHttpRequest(char *buffer, int len, struct HttpCheckResult *result)
                 return;
             }
 
+            parseUrl(url);
             if (0 == strcmp(method, "GET") && url == strstr(url, "/exec/"))
             {
                 result->code = 200;
@@ -115,11 +143,4 @@ void parseCommand(char *command)
         }
         current = next;
     }
-
-    // // New length of string
-    // int old_string_length = strlen(command);
-    // int new_string_length = old_string_length - 2 * num_spaces;
-    // char *result = (char *)malloc((new_string_length + 1) * sizeof(char));
-
-    // return result;
 }

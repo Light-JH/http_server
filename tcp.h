@@ -122,6 +122,7 @@ void executeCommand(char *command, char *output_buffer, int len)
 
     while (fgets(output_buffer, len, fp) != NULL)
     {
+        printf("line: %s", output_buffer);
         int slen = strlen(output_buffer);
         len -= slen;
         output_buffer += slen;
@@ -150,12 +151,13 @@ void processClientMessage(int client_fd, char *buffer, int len)
     }
     else if (http_check_result.code == 200)
     {
-        int written_len = snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 200 OK\r\n");
+        int written_len = snprintf(response_buffer, sizeof(response_buffer), "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
         // break up url
         char *command = http_check_result.url + strlen("/exec/");
         parseCommand(command);
         // Execute the command
         executeCommand(command, response_buffer + written_len, sizeof(response_buffer) - written_len * sizeof(char));
+        snprintf(response_buffer + strlen(response_buffer), sizeof(response_buffer) - strlen(response_buffer), "\r\n");
         send(client_fd, response_buffer, strlen(response_buffer), 0);
     }
 }
@@ -174,6 +176,7 @@ void serveClients(struct ServerState *server_state)
             else
             {
                 processClientMessage(server_state->pollfds[idx].fd, server_state->buffer, len);
+                closeClient(server_state, idx); // close the client - should actually check for keep-alive?
             }
         }
     }
