@@ -1,6 +1,3 @@
-Name: Jinjuan Hu
-ID: 1223893775
-
 # http_server
 Minimal http server written in C.
 
